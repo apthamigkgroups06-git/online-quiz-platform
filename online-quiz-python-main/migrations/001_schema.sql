@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS quizzes (
+    id SERIAL PRIMARY KEY, title TEXT NOT NULL,
+    limit_seconds INT NOT NULL DEFAULT 600,
+    negative_marks NUMERIC(4,2) NOT NULL DEFAULT 0,
+    partial_credit BOOLEAN NOT NULL DEFAULT FALSE);
+
+CREATE TABLE IF NOT EXISTS questions (
+    id SERIAL PRIMARY KEY,
+    quiz_id INT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+    prompt TEXT NOT NULL,
+    choices JSONB NOT NULL,
+    correct INT[] NOT NULL,
+    marks NUMERIC(4,2) NOT NULL DEFAULT 1);
+
+CREATE TABLE IF NOT EXISTS attempts (
+    id SERIAL PRIMARY KEY,
+    quiz_id INT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+    student TEXT NOT NULL,
+    deadline TIMESTAMPTZ NOT NULL,
+    submitted BOOLEAN NOT NULL DEFAULT FALSE,
+    score NUMERIC(6,2),
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now());
