@@ -1,0 +1,121 @@
+version: 2.1
+
+jobs:
+  lint:
+    docker:
+      - image: cimg/python:3.12.11
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            cd online-quiz-python-main
+            pip install -r requirements.txt ruff
+      - run:
+          name: Lint Python code
+          command: |
+            cd online-quiz-python-main
+            ruff check app
+
+  unit-tests:
+    docker:
+      - image: cimg/python:3.12.11
+    steps:
+      - checkout
+      - run:
+          name: Install test dependencies
+          command: |
+            cd online-quiz-python-main
+            pip install -r requirements.txt pytest pytest-cov
+      - run:
+          name: Run unit tests
+          command: |
+            cd online-quiz-python-main
+            pytest tests/test_scoring.py --cov=app.scoring --cov-report=term-missing
+
+  integration-tests:
+    docker:
+      - image: cimg/python:3.12.11
+      - image: cimg/postgres:16.4
+        environment:
+          POSTGRES_DB: quizdb
+          POSTGRES_USER: quiz
+          POSTGRES_PASSWORD: quizpass
+      - image: redis:7.4-alpine
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+            cd online-quiz-python-main
+            pip install -r requirements.txt pytest
+      - run:
+          name: Wait for services
+          command: |
+            for i in $(seq 1 30); do
+              if pg_isready -h localhost -U quiz -d quizdb && \
+                 redis-cli -h localhost ping 2>/dev/null | grep -q PONG; then
+                break
+              fi
+              sleep 2
+            done
+            pg_isready -h localhost -U quiz -d quizdb
+      - run:
+          name: Apply migrations
+          command: |
+            cd online-quiz-python-main
+            export DATABASE_URL=postgresql://quiz:quizpass@localhost:5432/quizdb
+            for file in migrations/*.sql; do
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+            done
+      - run:
+          name: Run integration tests
+          command: |
+            cd online-quiz-python-main
+            export DATABASE_URL=postgresql://quiz:quizpass@localhost:5432/quizdb
+            export REDIS_URL=redis://localhost:6379/0
+            pytest tests/test_integration.py
+
+  secret-scan:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - run:
+          name: Scan repository for secrets
+          command: |
+            cd online-quiz-python-main
+            curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/scripts/install.sh | sh -s -- -b /tmp
+            /tmp/gitleaks detect --source=. --no-git --redact
+
+  docker-build:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: |
+            docker build \
+              -t apthami5671/online-quiz-platform:1.0 \
+              ./online-quiz-python-main
+
+workflows:
+  quiz-platform-pipeline:
+    jobs:
+      - lint
+      - unit-tests:
+          requires:
+            - lint
+      - integration-tests:
+          requires:
+            - unit-tests
+      - secret-scan:
+          requires:
+            - integration-tests
+      - docker-build:
+          requires:
+            - secret-scan
