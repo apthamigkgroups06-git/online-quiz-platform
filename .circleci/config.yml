@@ -76,7 +76,7 @@ jobs:
             cd online-quiz-python-main
             export DATABASE_URL=postgresql://quiz:quizpass@localhost:5432/quizdb
             export REDIS_URL=redis://localhost:6379/0
-            pytest tests/test_integration.py
+            python -m pytest tests/test_integration.py
 
   secret-scan:
     docker:
