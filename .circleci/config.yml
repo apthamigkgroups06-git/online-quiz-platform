@@ -31,7 +31,7 @@ jobs:
           name: Run unit tests
           command: |
             cd online-quiz-python-main
-            pytest tests/test_scoring.py --cov=app.scoring --cov-report=term-missing
+            python -m pytest tests/test_scoring.py --cov=app.scoring --cov-report=term-missing
 
   integration-tests:
     docker:
