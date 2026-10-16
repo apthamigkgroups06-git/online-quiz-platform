@@ -1,6 +1,5 @@
-from datetime import datetime, timedelta, timezone
-
 import pytest
+from datetime import datetime, timedelta, timezone
 
 from app.scoring import (
     QuizError,
