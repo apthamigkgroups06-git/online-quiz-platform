@@ -125,4 +125,10 @@ def test_grade_returns_correct_total_and_percentage():
 def test_grade_never_returns_negative_total():
     questions = [
         {"id": 1, "correct": [1], "marks": 1},
+]
+    answers = {1: [2]}
+
+    result = grade(questions, answers)
+
+    assert result["score"] >= 0
    
