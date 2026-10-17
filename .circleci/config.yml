@@ -3,44 +3,59 @@
 jobs:
   lint:
     docker:
-      - image: cimg/python:3.12.11
+      - image: cimg/python:3.12
     steps:
       - checkout
+
       - run:
           name: Install dependencies
           command: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt ruff pytest
+            cd online-quiz-python-main
+            pip install -r requirements.txt
+            pip install ruff
+
       - run:
-          name: Lint Python code
-          command: ruff check app tests
+          name: Run Ruff lint
+          command: |
+            cd online-quiz-python-main
+            ruff check app tests
 
   tests:
     docker:
-      - image: cimg/python:3.12.11
+      - image: cimg/python:3.12
     steps:
       - checkout
+
       - run:
           name: Install dependencies
           command: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt pytest
+            cd online-quiz-python-main
+            pip install -r requirements.txt
+            pip install pytest
+
       - run:
           name: Run automated tests
-          command: pytest -q
+          command: |
+            cd online-quiz-python-main
+            pytest --import-mode=importlib tests -q
 
   docker-build:
     docker:
       - image: cimg/base:stable
     steps:
       - checkout
+
       - setup_remote_docker
+
       - run:
-          name: Build application Docker image
-          command: docker build -t online-quiz-platform:ci .
+          name: Build Docker image
+          command: |
+            docker build \
+              -t online-quiz-platform:ci \
+              ./online-quiz-python-main
 
 workflows:
-  quiz-platform-pipeline:
+  build-and-test:
     jobs:
       - lint
       - tests
