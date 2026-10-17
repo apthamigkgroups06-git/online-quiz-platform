@@ -1,130 +1,129 @@
-
-
-  version: 2.1
+@'
+version: 2.1
 
 jobs:
-lint:
-docker:
-- image: cimg/python:3.12.11
-steps:
-- checkout
-- run:
-name: Install dependencies
-command: |
-cd online-quiz-python-main
-python -m pip install -r requirements.txt ruff
-- run:
-name: Lint Python code
-command: |
-cd online-quiz-python-main
-ruff check app
+  lint:
+    docker:
+      - image: cimg/python:3.12.11
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            cd online-quiz-python-main
+            python -m pip install -r requirements.txt ruff
+      - run:
+          name: Lint Python code
+          command: |
+            cd online-quiz-python-main
+            ruff check app
 
-unit-tests:
-docker:
-- image: cimg/python:3.12.11
-steps:
-- checkout
-- run:
-name: Install test dependencies
-command: |
-cd online-quiz-python-main
-python -m pip install -r requirements.txt pytest pytest-cov
-- run:
-name: Run unit tests
-command: |
-cd online-quiz-python-main
-python -m pytest tests/test_scoring.py --cov=app.scoring --cov-report=term-missing
+  unit-tests:
+    docker:
+      - image: cimg/python:3.12.11
+    steps:
+      - checkout
+      - run:
+          name: Install test dependencies
+          command: |
+            cd online-quiz-python-main
+            python -m pip install -r requirements.txt pytest pytest-cov
+      - run:
+          name: Run unit tests
+          command: |
+            cd online-quiz-python-main
+            python -m pytest tests/test_scoring.py --cov=app.scoring --cov-report=term-missing
 
-integration-tests:
-docker:
-- image: cimg/python:3.12.11
-- image: cimg/postgres:16.4
-environment:
-POSTGRES_DB: quizdb
-POSTGRES_USER: quiz
-POSTGRES_PASSWORD: quizpass
-- image: redis:7.4-alpine
-steps:
-- checkout
-- run:
-name: Install dependencies
-command: |
-sudo apt-get update
-sudo apt-get install -y postgresql-client redis-tools
-cd online-quiz-python-main
-python -m pip install -r requirements.txt pytest
-- run:
-name: Wait for database and Redis
-command: |
-for i in $(seq 1 30); do
-if pg_isready -h localhost -U quiz -d quizdb && 
-redis-cli -h localhost ping 2>/dev/null | grep -q PONG; then
-echo "PostgreSQL and Redis are ready"
-exit 0
-fi
-sleep 2
-done
-echo "Services did not become ready in time"
-exit 1
-- run:
-name: Apply database migrations
-command: |
-cd online-quiz-python-main
-export DATABASE_URL=postgresql://quiz:quizpass@localhost:5432/quizdb
-for file in migrations/*.sql; do
-echo "Applying migration: $file"
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
-done
-- run:
-name: Run integration tests
-command: |
-cd online-quiz-python-main
-export DATABASE_URL=postgresql://quiz:quizpass@localhost:5432/quizdb
-export REDIS_URL=redis://localhost:6379/0
-python -m pytest tests/test_integration.py
+  integration-tests:
+    docker:
+      - image: cimg/python:3.12.11
+      - image: cimg/postgres:16.4
+        environment:
+          POSTGRES_DB: quizdb
+          POSTGRES_USER: quiz
+          POSTGRES_PASSWORD: quizpass
+      - image: redis:7.4-alpine
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client redis-tools
+            cd online-quiz-python-main
+            python -m pip install -r requirements.txt pytest
+      - run:
+          name: Wait for database and Redis
+          command: |
+            for i in $(seq 1 30); do
+              if pg_isready -h localhost -U quiz -d quizdb && redis-cli -h localhost ping 2>/dev/null | grep -q PONG; then
+                echo "PostgreSQL and Redis are ready"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Services did not become ready in time"
+            exit 1
+      - run:
+          name: Apply database migrations
+          command: |
+            cd online-quiz-python-main
+            export DATABASE_URL=postgresql://quiz:quizpass@localhost:5432/quizdb
+            for file in migrations/*.sql; do
+              echo "Applying migration: $file"
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+            done
+      - run:
+          name: Run integration tests
+          command: |
+            cd online-quiz-python-main
+            export DATABASE_URL=postgresql://quiz:quizpass@localhost:5432/quizdb
+            export REDIS_URL=redis://localhost:6379/0
+            python -m pytest tests/test_integration.py
 
-secret-scan:
-docker:
-- image: cimg/go:1.25
-steps:
-- checkout
-- run:
-name: Install Gitleaks
-command: |
-go install github.com/zricethezav/gitleaks/v8@latest
-echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> "$BASH_ENV"
-- run:
-name: Scan repository for secrets
-command: |
-cd online-quiz-python-main
-"$(go env GOPATH)/bin/gitleaks" detect --source=. --no-git --redact
+  secret-scan:
+    docker:
+      - image: cimg/go:1.25
+    steps:
+      - checkout
+      - run:
+          name: Install Gitleaks
+          command: |
+            go install github.com/zricethezav/gitleaks/v8@latest
+            echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> "$BASH_ENV"
+      - run:
+          name: Scan repository for secrets
+          command: |
+            cd online-quiz-python-main
+            "$(go env GOPATH)/bin/gitleaks" detect --source=. --no-git --redact
 
-docker-build:
-docker:
-- image: cimg/base:current
-steps:
-- checkout
-- setup_remote_docker
-- run:
-name: Build Docker image
-command: |
-docker build 
--t apthami5671/online-quiz-platform:1.0 
-./online-quiz-python-main
+  docker-build:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t apthami5671/online-quiz-platform:1.0 ./online-quiz-python-main
 
 workflows:
-quiz-platform-pipeline:
-jobs:
-- lint
-- unit-tests:
-requires:
-- lint
-- integration-tests:
-requires:
-- unit-tests
-- secret-scan:
-requires:
-- integration-tests
-- docker-build:
-requires:
-- secret-scan
+  quiz-platform-pipeline:
+    jobs:
+      - lint
+      - unit-tests:
+          requires:
+            - lint
+      - integration-tests:
+          requires:
+            - unit-tests
+      - secret-scan:
+          requires:
+            - integration-tests
+      - docker-build:
+          requires:
+            - secret-scan
+'@ | Set-Content -Path .circleci\config.yml -Encoding ascii
+
+  
