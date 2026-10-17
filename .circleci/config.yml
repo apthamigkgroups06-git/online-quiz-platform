@@ -10,15 +10,13 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            cd online-quiz-python-main
+            python -m pip install --upgrade pip
             pip install -r requirements.txt
             pip install ruff
 
       - run:
           name: Run Ruff lint
-          command: |
-            cd online-quiz-python-main
-            ruff check app tests
+          command: ruff check app tests
 
   tests:
     docker:
@@ -29,15 +27,13 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            cd online-quiz-python-main
+            python -m pip install --upgrade pip
             pip install -r requirements.txt
             pip install pytest
 
       - run:
           name: Run automated tests
-          command: |
-            cd online-quiz-python-main
-            pytest --import-mode=importlib tests -q
+          command: python -m pytest --import-mode=importlib tests -q
 
   docker-build:
     docker:
@@ -49,10 +45,7 @@ jobs:
 
       - run:
           name: Build Docker image
-          command: |
-            docker build \
-              -t online-quiz-platform:ci \
-              ./online-quiz-python-main
+          command: docker build -t online-quiz-platform:ci .
 
 workflows:
   build-and-test:
