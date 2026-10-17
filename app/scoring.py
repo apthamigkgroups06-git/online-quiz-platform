@@ -1,5 +1,5 @@
 """Pure scoring and timing rules. No database, no HTTP."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 class QuizError(ValueError):
@@ -18,13 +18,13 @@ def deadline_for(started_at, limit_seconds):
 
 
 def seconds_left(deadline, now=None):
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     return max(0, int((deadline - now).total_seconds()))
 
 
 def is_expired(deadline, now=None, grace_seconds=2):
     """Grace allows for the round trip between the student's click and the server."""
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     return (now - deadline).total_seconds() > grace_seconds
 
 

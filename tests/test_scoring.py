@@ -1,20 +1,20 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
-from datetime import datetime, timedelta, timezone
 
 from app.scoring import (
     QuizError,
     deadline_for,
-    seconds_left,
+    grade,
     is_expired,
     score_question,
-    grade,
+    seconds_left,
 )
-
 
 # Tests for deadline_for()
 
 def test_deadline_for_valid_limit():
-    start = datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
 
     result = deadline_for(start, 60)
 
@@ -22,14 +22,14 @@ def test_deadline_for_valid_limit():
 
 
 def test_deadline_for_zero_limit():
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
 
     with pytest.raises(QuizError):
         deadline_for(start, 0)
 
 
 def test_deadline_for_negative_limit():
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
 
     with pytest.raises(QuizError):
         deadline_for(start, -10)
@@ -38,21 +38,21 @@ def test_deadline_for_negative_limit():
 # Tests for seconds_left()
 
 def test_seconds_left_returns_remaining_time():
-    now = datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     deadline = now + timedelta(seconds=50)
 
     assert seconds_left(deadline, now) == 50
 
 
 def test_seconds_left_returns_zero_after_deadline():
-    now = datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     deadline = now - timedelta(seconds=10)
 
     assert seconds_left(deadline, now) == 0
 
 
 def test_seconds_left_rounds_down():
-    now = datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     deadline = now + timedelta(seconds=5.9)
 
     assert seconds_left(deadline, now) == 5
@@ -61,21 +61,21 @@ def test_seconds_left_rounds_down():
 # Tests for is_expired()
 
 def test_is_expired_before_deadline():
-    now = datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     deadline = now + timedelta(seconds=10)
 
     assert is_expired(deadline, now) is False
 
 
 def test_is_expired_within_grace_period():
-    deadline = datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
+    deadline = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     now = deadline + timedelta(seconds=1)
 
     assert is_expired(deadline, now) is False
 
 
 def test_is_expired_after_grace_period():
-    deadline = datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc)
+    deadline = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     now = deadline + timedelta(seconds=3)
 
     assert is_expired(deadline, now) is True

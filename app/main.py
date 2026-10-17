@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -43,7 +43,7 @@ def start(payload: dict = Body(...)):
     if not student:
         raise HTTPException(400, "student is required")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     try:
         dl = deadline_for(now, quiz["limit_seconds"])
     except QuizError as e:
