@@ -1,4 +1,4 @@
-@'
+
 version: 2.1
 
 jobs:
@@ -124,6 +124,6 @@ workflows:
       - docker-build:
           requires:
             - secret-scan
-'@ | Set-Content -Path .circleci\config.yml -Encoding ascii
+
 
   
